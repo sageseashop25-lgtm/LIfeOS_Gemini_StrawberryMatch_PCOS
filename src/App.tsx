@@ -11,10 +11,12 @@ import {
 import JournalModule from './components/JournalModule';
 import CalendarModule from './components/CalendarModule';
 import SettingsPanel from './components/SettingsPanel';
+import CreateEntryModal from './components/CreateEntryModal';
+import LookingBackModule from './components/LookingBackModule';
 import { 
   Sparkles, Shield, Database, Calendar as CalendarIcon, 
   BookOpen, Star, HelpCircle, Heart, CheckCircle2, CloudLightning,
-  Lock, Unlock, Key, Eye, EyeOff, AlertCircle
+  Lock, Unlock, Key, Eye, EyeOff, AlertCircle, Plus, TrendingUp
 } from 'lucide-react';
 
 export default function App() {
@@ -93,7 +95,8 @@ export default function App() {
   // Default selected date to 2026-07-19 (the seed data hub)
   const [selectedDate, setSelectedDate] = useState('2026-07-19');
   const [showSettings, setShowSettings] = useState(false);
-  const [activeTab, setActiveTab] = useState<'both' | 'journal' | 'calendar'>('both');
+  const [activeTab, setActiveTab] = useState<'journal' | 'calendar' | 'looking_back'>('journal');
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
 
   // Customizable sub-headline state
   const [subHeadline, setSubHeadline] = useState<string>(() => {
@@ -172,6 +175,10 @@ export default function App() {
     setContentItems(prev => [newItem, ...prev]);
   };
 
+  const handleUpdateContentItem = (updated: ContentItem) => {
+    setContentItems(prev => prev.map(c => c.id === updated.id ? updated : c));
+  };
+
   const handleDeleteContentItem = (id: string) => {
     setContentItems(prev => prev.filter(c => c.id !== id));
   };
@@ -185,6 +192,10 @@ export default function App() {
     setSocialEvents(prev => [newEvent, ...prev]);
   };
 
+  const handleUpdateSocialEvent = (updated: SocialEvent) => {
+    setSocialEvents(prev => prev.map(s => s.id === updated.id ? updated : s));
+  };
+
   const handleDeleteSocialEvent = (id: string) => {
     setSocialEvents(prev => prev.filter(s => s.id !== id));
   };
@@ -196,6 +207,10 @@ export default function App() {
       id: `e-${Date.now()}`
     };
     setEvidenceDeliverables(prev => [newDev, ...prev]);
+  };
+
+  const handleUpdateEvidenceDeliverable = (updated: EvidenceDeliverable) => {
+    setEvidenceDeliverables(prev => prev.map(e => e.id === updated.id ? updated : e));
   };
 
   const handleDeleteEvidenceDeliverable = (id: string) => {
@@ -341,8 +356,8 @@ export default function App() {
         <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
           <div className="space-y-1">
             <div className="flex items-center gap-2 flex-wrap">
-              <span className="text-[10px] bg-matcha-primary text-white font-mono font-bold uppercase tracking-widest px-2 py-0.5 rounded-full border border-white/20 shadow-xs">
-                LifeOS Mini
+              <span className="text-[10px] bg-matcha-primary text-white font-mono font-bold uppercase tracking-widest px-2.5 py-0.5 rounded-full border border-white/20 shadow-xs">
+                HELLO PRETTY XX
               </span>
             </div>
             <h1 className="text-2xl sm:text-3xl font-extrabold text-ink-dark tracking-widest font-display uppercase flex items-center gap-1.5" id="moonlog-branding-title">
@@ -411,6 +426,15 @@ export default function App() {
             </div>
 
             <div className="flex gap-2 w-full sm:w-auto items-center">
+              <button
+                onClick={() => setIsCreateModalOpen(true)}
+                className="px-4 py-2 rounded-full bg-matcha-primary hover:bg-matcha-primary/90 text-white font-bold text-xs uppercase tracking-wider shadow-md hover:shadow-lg transition-all cursor-pointer flex items-center gap-1.5 border border-white/20"
+                id="top-create-entry-btn"
+              >
+                <Plus className="w-4 h-4" />
+                <span>+ New Entry</span>
+              </button>
+
               {syncConfig.password && (
                 <button
                   onClick={() => {
@@ -492,7 +516,7 @@ export default function App() {
               <BookOpen className="w-4.5 h-4.5 sm:w-5 sm:h-5" />
               <span className="text-[10px] sm:text-[11px] lg:text-[9px] font-bold font-mono uppercase tracking-tight">Journal</span>
               <span className="absolute left-full ml-3 px-2 py-1 bg-ink-dark text-white text-[10px] font-semibold rounded-md opacity-0 lg:group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none z-50 shadow-md">
-                Journal & Cycle Tracker
+                Journal History & Reflection Logs
               </span>
             </button>
 
@@ -507,65 +531,37 @@ export default function App() {
               <CalendarIcon className="w-4.5 h-4.5 sm:w-5 sm:h-5" />
               <span className="text-[10px] sm:text-[11px] lg:text-[9px] font-bold font-mono uppercase tracking-tight">Calendar</span>
               <span className="absolute left-full ml-3 px-2 py-1 bg-ink-dark text-white text-[10px] font-semibold rounded-md opacity-0 lg:group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none z-50 shadow-md">
-                3-Lens Life Calendar
+                3-Lens Calendar & Schedule
               </span>
             </button>
 
             <button
-              onClick={() => setActiveTab('both')}
+              onClick={() => setActiveTab('looking_back')}
               className={`flex-1 lg:flex-initial py-2.5 px-3 rounded-xl flex flex-row lg:flex-col items-center justify-center gap-2 transition-all cursor-pointer relative group ${
-                activeTab === 'both'
+                activeTab === 'looking_back'
                   ? 'bg-matcha-primary text-white shadow-md shadow-matcha-primary/25 font-bold'
                   : 'bg-white hover:bg-[#FAF0EC]/60 text-[#5D524F]/70 border border-matcha-primary/5 font-medium'
               }`}
             >
-              <Sparkles className="w-4.5 h-4.5 sm:w-5 sm:h-5" />
-              <span className="text-[10px] sm:text-[11px] lg:text-[9px] font-bold font-mono uppercase tracking-tight">Split</span>
+              <TrendingUp className="w-4.5 h-4.5 sm:w-5 sm:h-5" />
+              <span className="text-[10px] sm:text-[11px] lg:text-[9px] font-bold font-mono uppercase tracking-tight">Looking Back</span>
               <span className="absolute left-full ml-3 px-2 py-1 bg-ink-dark text-white text-[10px] font-semibold rounded-md opacity-0 lg:group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none z-50 shadow-md">
-                Split Screen Dashboard
+                Graphs, Trends & Analytics
               </span>
             </button>
           </div>
 
           {/* Main Content Workspace Panes */}
           <div className="flex-1 w-full min-w-0">
-            {(activeTab === 'both') && (
-              <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-                {/* Left Panel: Private Journal Module */}
-                <section className="lg:col-span-5 h-full">
-                  <JournalModule
-                    entries={journalEntries}
-                    onAddEntry={handleAddJournalEntry}
-                    onDeleteEntry={handleDeleteJournalEntry}
-                    selectedDate={selectedDate}
-                    periodLogs={periodLogs}
-                    cycleSettings={cycleSettings}
-                    onSavePeriodLog={handleSavePeriodLog}
-                    onDeletePeriodLog={handleDeletePeriodLog}
-                    onUpdateCycleSettings={setCycleSettings}
-                  />
-                </section>
-
-                {/* Right Panel: Shared Calendar Grid with Overlays */}
-                <section className="lg:col-span-7 h-full">
-                  <CalendarModule
-                    contentItems={contentItems}
-                    socialEvents={socialEvents}
-                    evidenceDeliverables={evidenceDeliverables}
-                    selectedDate={selectedDate}
-                    onSelectDate={setSelectedDate}
-                    onAddContentItem={handleAddContentItem}
-                    onAddSocialEvent={handleAddSocialEvent}
-                    onAddEvidenceDeliverable={handleAddEvidenceDeliverable}
-                    onDeleteContentItem={handleDeleteContentItem}
-                    onDeleteSocialEvent={handleDeleteSocialEvent}
-                    onDeleteEvidenceDeliverable={handleDeleteEvidenceDeliverable}
-                    periodLogs={periodLogs}
-                    cycleSettings={cycleSettings}
-                    journalEntries={journalEntries}
-                  />
-                </section>
-              </div>
+            {activeTab === 'looking_back' && (
+              <LookingBackModule
+                journalEntries={journalEntries}
+                contentItems={contentItems}
+                socialEvents={socialEvents}
+                evidenceDeliverables={evidenceDeliverables}
+                periodLogs={periodLogs}
+                cycleSettings={cycleSettings}
+              />
             )}
 
             {activeTab === 'journal' && (
@@ -595,6 +591,9 @@ export default function App() {
                   onAddContentItem={handleAddContentItem}
                   onAddSocialEvent={handleAddSocialEvent}
                   onAddEvidenceDeliverable={handleAddEvidenceDeliverable}
+                  onUpdateContentItem={handleUpdateContentItem}
+                  onUpdateSocialEvent={handleUpdateSocialEvent}
+                  onUpdateEvidenceDeliverable={handleUpdateEvidenceDeliverable}
                   onDeleteContentItem={handleDeleteContentItem}
                   onDeleteSocialEvent={handleDeleteSocialEvent}
                   onDeleteEvidenceDeliverable={handleDeleteEvidenceDeliverable}
@@ -609,30 +608,35 @@ export default function App() {
         </div>
       </main>
 
+      {/* Quick Create Entry Modal */}
+      <CreateEntryModal
+        isOpen={isCreateModalOpen}
+        onClose={() => setIsCreateModalOpen(false)}
+        selectedDate={selectedDate}
+        onAddJournalEntry={(entry) => handleAddJournalEntry(entry.content, entry.mood, entry.tags, entry.photos, entry.date)}
+        onAddContentItem={handleAddContentItem}
+        onAddSocialEvent={handleAddSocialEvent}
+        onAddEvidenceDeliverable={handleAddEvidenceDeliverable}
+        onSavePeriodLog={handleSavePeriodLog}
+      />
+
       {/* Minimal Footer */}
       <footer className="bg-[#FAF0EC]/60 border-t border-matcha-primary/20 py-6 px-6 text-center text-xs text-ink-dark/80 mt-auto" id="app-footer">
-        <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
-          <div className="flex items-center gap-1.5">
-            <Heart className="w-3.5 h-3.5 text-strawberry-accent fill-strawberry-accent animate-pulse" />
-            <span>Own your life metrics with <strong className="text-ink-dark">LifeOS Mini</strong></span>
-          </div>
-          
-          <div className="flex flex-col sm:flex-row items-center gap-4">
-            <p className="font-mono text-[10px] text-ink-dark/50">
-              Created for personal sanctuary, self-hosted on your private Google Drive spreadsheet.
-            </p>
-            <button
-              onClick={() => {
-                setShowSettings(true);
-                window.scrollTo({ top: 0, behavior: 'smooth' });
-              }}
-              className="px-2.5 py-1.5 text-[10px] font-bold uppercase tracking-wider text-[#5D524F]/70 border border-[#5D524F]/20 hover:border-matcha-primary hover:text-matcha-primary bg-white/50 rounded-md transition-all cursor-pointer flex items-center gap-1 font-mono"
-              id="footer-edit-sync-btn"
-            >
-              <Database className="w-3 h-3" />
-              <span>Configure Cloud Sync</span>
-            </button>
-          </div>
+        <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
+          <p className="font-mono text-[10px] text-ink-dark/50">
+            Created for personal sanctuary, self-hosted on your private Google Drive spreadsheet.
+          </p>
+          <button
+            onClick={() => {
+              setShowSettings(true);
+              window.scrollTo({ top: 0, behavior: 'smooth' });
+            }}
+            className="px-2.5 py-1.5 text-[10px] font-bold uppercase tracking-wider text-[#5D524F]/70 border border-[#5D524F]/20 hover:border-matcha-primary hover:text-matcha-primary bg-white/50 rounded-md transition-all cursor-pointer flex items-center gap-1 font-mono"
+            id="footer-edit-sync-btn"
+          >
+            <Database className="w-3 h-3" />
+            <span>Configure Cloud Sync</span>
+          </button>
         </div>
       </footer>
     </div>

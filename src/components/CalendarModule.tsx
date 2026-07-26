@@ -1,10 +1,14 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { ContentItem, SocialEvent, EvidenceDeliverable, ContentPhase, SocialPhase, PeriodLog, CycleSettings, JournalEntry } from '../types';
+import { 
+  ContentItem, SocialEvent, EvidenceDeliverable, ContentPhase, SocialPhase, 
+  PeriodLog, CycleSettings, JournalEntry, LensConfig, LensMeta 
+} from '../types';
 import { getCycleInfoForDate } from '../utils/cycleUtils';
 import { 
   Calendar as CalendarIcon, ChevronLeft, ChevronRight, CheckCircle, 
-  Layers, Users, ShieldAlert, Award, Star, Activity, BarChart, Plus, Trash2, Edit 
+  Layers, Users, ShieldAlert, Award, Star, Activity, BarChart, Plus, Trash2, Edit,
+  Settings, RotateCcw, Save, Sparkles, X, Check
 } from 'lucide-react';
 
 interface CalendarModuleProps {
@@ -16,6 +20,9 @@ interface CalendarModuleProps {
   onAddContentItem: (item: Omit<ContentItem, 'id'>) => void;
   onAddSocialEvent: (item: Omit<SocialEvent, 'id'>) => void;
   onAddEvidenceDeliverable: (item: Omit<EvidenceDeliverable, 'id'>) => void;
+  onUpdateContentItem?: (item: ContentItem) => void;
+  onUpdateSocialEvent?: (item: SocialEvent) => void;
+  onUpdateEvidenceDeliverable?: (item: EvidenceDeliverable) => void;
   onDeleteContentItem: (id: string) => void;
   onDeleteSocialEvent: (id: string) => void;
   onDeleteEvidenceDeliverable: (id: string) => void;
@@ -23,6 +30,12 @@ interface CalendarModuleProps {
   cycleSettings?: CycleSettings;
   journalEntries?: JournalEntry[];
 }
+
+const DEFAULT_LENS_CONFIG: LensConfig = {
+  content: { name: 'Content Lens', emoji: '🎬', description: 'Pipeline, media & content milestones' },
+  social: { name: 'Social Lens', emoji: '🥂', description: 'Events, networking & personal commitments' },
+  evidence: { name: 'Evidence Lens', emoji: '🎯', description: 'Deliverables, capacity & proof of work' },
+};
 
 const MOOD_INTENSITIES: Record<string, number> = {
   '🌸 Serene': 7,
@@ -66,6 +79,9 @@ export default function CalendarModule({
   onAddContentItem,
   onAddSocialEvent,
   onAddEvidenceDeliverable,
+  onUpdateContentItem,
+  onUpdateSocialEvent,
+  onUpdateEvidenceDeliverable,
   onDeleteContentItem,
   onDeleteSocialEvent,
   onDeleteEvidenceDeliverable,
@@ -73,6 +89,80 @@ export default function CalendarModule({
   cycleSettings,
   journalEntries = []
 }: CalendarModuleProps) {
+  // Customizable 3-Lens Config state
+  const [lensConfig, setLensConfig] = useState<LensConfig>(() => {
+    try {
+      const saved = localStorage.getItem('lifeos_lens_config');
+      if (saved) return JSON.parse(saved);
+    } catch (e) {}
+    return DEFAULT_LENS_CONFIG;
+  });
+
+  const [isLensEditorOpen, setIsLensEditorOpen] = useState(false);
+
+  // Local state for editing Lens Metadata
+  const [editContentName, setEditContentName] = useState(lensConfig.content.name);
+  const [editContentEmoji, setEditContentEmoji] = useState(lensConfig.content.emoji);
+  const [editSocialName, setEditSocialName] = useState(lensConfig.social.name);
+  const [editSocialEmoji, setEditSocialEmoji] = useState(lensConfig.social.emoji);
+  const [editEvidenceName, setEditEvidenceName] = useState(lensConfig.evidence.name);
+  const [editEvidenceEmoji, setEditEvidenceEmoji] = useState(lensConfig.evidence.emoji);
+
+  const handleSaveLensConfig = () => {
+    const updated: LensConfig = {
+      content: { ...lensConfig.content, name: editContentName.trim() || 'Content Lens', emoji: editContentEmoji.trim() || '🎬' },
+      social: { ...lensConfig.social, name: editSocialName.trim() || 'Social Lens', emoji: editSocialEmoji.trim() || '🥂' },
+      evidence: { ...lensConfig.evidence, name: editEvidenceName.trim() || 'Evidence Lens', emoji: editEvidenceEmoji.trim() || '🎯' },
+    };
+    setLensConfig(updated);
+    localStorage.setItem('lifeos_lens_config', JSON.stringify(updated));
+    setIsLensEditorOpen(false);
+  };
+
+  const handleResetLensConfig = () => {
+    setLensConfig(DEFAULT_LENS_CONFIG);
+    setEditContentName(DEFAULT_LENS_CONFIG.content.name);
+    setEditContentEmoji(DEFAULT_LENS_CONFIG.content.emoji);
+    setEditSocialName(DEFAULT_LENS_CONFIG.social.name);
+    setEditSocialEmoji(DEFAULT_LENS_CONFIG.social.emoji);
+    setEditEvidenceName(DEFAULT_LENS_CONFIG.evidence.name);
+    setEditEvidenceEmoji(DEFAULT_LENS_CONFIG.evidence.emoji);
+    localStorage.removeItem('lifeos_lens_config');
+  };
+
+  const handlePresetLens = (presetKey: 'creator' | 'projects' | 'personal' | 'tech') => {
+    let cfg: LensConfig;
+    if (presetKey === 'projects') {
+      cfg = {
+        content: { name: 'Projects & Work', emoji: '💼', description: 'Work deliverables & milestones' },
+        social: { name: 'Meetings & Team', emoji: '👥', description: '1:1s, syncs & networking' },
+        evidence: { name: 'KPIs & Impact', emoji: '📈', description: 'Metrics & business results' }
+      };
+    } else if (presetKey === 'personal') {
+      cfg = {
+        content: { name: 'Learning & Skills', emoji: '📚', description: 'Reading, courses & practice' },
+        social: { name: 'Family & Friends', emoji: '❤️', description: 'Gatherings, dates & social time' },
+        evidence: { name: 'Health & Fitness', emoji: '💪', description: 'Workouts, habits & wellness' }
+      };
+    } else if (presetKey === 'tech') {
+      cfg = {
+        content: { name: 'Code & Releases', emoji: '💻', description: 'Features, refactors & deployments' },
+        social: { name: 'Clients & Office', emoji: '🤝', description: 'Client calls & networking' },
+        evidence: { name: 'Proof & Tests', emoji: '🏆', description: 'Audits & performance scores' }
+      };
+    } else {
+      cfg = DEFAULT_LENS_CONFIG;
+    }
+    setLensConfig(cfg);
+    setEditContentName(cfg.content.name);
+    setEditContentEmoji(cfg.content.emoji);
+    setEditSocialName(cfg.social.name);
+    setEditSocialEmoji(cfg.social.emoji);
+    setEditEvidenceName(cfg.evidence.name);
+    setEditEvidenceEmoji(cfg.evidence.emoji);
+    localStorage.setItem('lifeos_lens_config', JSON.stringify(cfg));
+  };
+
   // Lenses Toggles
   const [lensContent, setLensContent] = useState(true);
   const [lensSocial, setLensSocial] = useState(true);
@@ -86,6 +176,81 @@ export default function CalendarModule({
   // Quick Add states
   const [activeTab, setActiveTab] = useState<'content' | 'social' | 'evidence'>('content');
   const [showAddForm, setShowAddForm] = useState(false);
+
+  // Item inline editing states for Day Inspector
+  const [editingContentId, setEditingContentId] = useState<string | null>(null);
+  const [editingSocialId, setEditingSocialId] = useState<string | null>(null);
+  const [editingEvidenceId, setEditingEvidenceId] = useState<string | null>(null);
+
+  // Edit fields - Content
+  const [ecTitle, setEcTitle] = useState('');
+  const [ecPhase, setEcPhase] = useState<ContentPhase>('Planning');
+  const [ecStatus, setEcStatus] = useState('Idea');
+  const [ecNotes, setEcNotes] = useState('');
+
+  // Edit fields - Social
+  const [esTitle, setEsTitle] = useState('');
+  const [esPhase, setEsPhase] = useState<SocialPhase>('Planning');
+  const [esStatus, setEsStatus] = useState('Proposed');
+  const [esNotes, setEsNotes] = useState('');
+
+  // Edit fields - Evidence
+  const [eeTitle, setEeTitle] = useState('');
+  const [eeCapacity, setEeCapacity] = useState(1);
+  const [eeImpactValue, setEeImpactValue] = useState(1);
+  const [eeImpactUnit, setEeImpactUnit] = useState<'currency' | 'hours' | 'percent'>('hours');
+  const [eeQualityScore, setEeQualityScore] = useState(100);
+  const [eeNotes, setEeNotes] = useState('');
+
+  const handleStartEditContent = (item: ContentItem) => {
+    setEditingContentId(item.id);
+    setEcTitle(item.title);
+    setEcPhase(item.phase);
+    setEcStatus(item.status);
+    setEcNotes(item.notes);
+  };
+
+  const handleSaveEditContent = (id: string, date: string) => {
+    if (!ecTitle.trim()) return;
+    if (onUpdateContentItem) {
+      onUpdateContentItem({ id, date, title: ecTitle, phase: ecPhase, status: ecStatus, notes: ecNotes });
+    }
+    setEditingContentId(null);
+  };
+
+  const handleStartEditSocial = (event: SocialEvent) => {
+    setEditingSocialId(event.id);
+    setEsTitle(event.title);
+    setEsPhase(event.phase);
+    setEsStatus(event.status);
+    setEsNotes(event.notes);
+  };
+
+  const handleSaveEditSocial = (id: string, date: string) => {
+    if (!esTitle.trim()) return;
+    if (onUpdateSocialEvent) {
+      onUpdateSocialEvent({ id, date, title: esTitle, phase: esPhase, status: esStatus, notes: esNotes });
+    }
+    setEditingSocialId(null);
+  };
+
+  const handleStartEditEvidence = (dev: EvidenceDeliverable) => {
+    setEditingEvidenceId(dev.id);
+    setEeTitle(dev.title);
+    setEeCapacity(dev.capacityCount);
+    setEeImpactValue(dev.impactValue);
+    setEeImpactUnit(dev.impactUnit);
+    setEeQualityScore(dev.qualityScore);
+    setEeNotes(dev.notes);
+  };
+
+  const handleSaveEditEvidence = (id: string, date: string) => {
+    if (!eeTitle.trim()) return;
+    if (onUpdateEvidenceDeliverable) {
+      onUpdateEvidenceDeliverable({ id, date, title: eeTitle, capacityCount: eeCapacity, impactValue: eeImpactValue, impactUnit: eeImpactUnit, qualityScore: eeQualityScore, notes: eeNotes });
+    }
+    setEditingEvidenceId(null);
+  };
 
   // Form states - Content
   const [cTitle, setCTitle] = useState('');
@@ -311,7 +476,7 @@ export default function CalendarModule({
               }`}
               title={item.title}
             >
-              🎬 {item.title}
+              {lensConfig.content.emoji} {item.title}
             </div>
           ))}
 
@@ -325,7 +490,7 @@ export default function CalendarModule({
               }`}
               title={event.title}
             >
-              🥂 {event.title}
+              {lensConfig.social.emoji} {event.title}
             </div>
           ))}
 
@@ -339,7 +504,7 @@ export default function CalendarModule({
               }`}
               title={`${dev.title} (${dev.capacityCount} - ${dev.impactValue}${dev.impactUnit === 'currency' ? '$' : dev.impactUnit})`}
             >
-              🎯 {dev.title}
+              {lensConfig.evidence.emoji} {dev.title}
             </div>
           ))}
         </div>
@@ -437,20 +602,20 @@ export default function CalendarModule({
             <div className="mt-2.5 pt-2.5 border-t border-matcha-primary/10 text-[9px] text-[#5D524F]/60 space-y-1">
               {dayContent.length > 0 && (
                 <div className="flex items-center gap-1.5">
-                  <span>🎬</span>
-                  <span className="font-semibold">{dayContent.length} Content Item{dayContent.length > 1 ? 's' : ''}</span>
+                  <span>{lensConfig.content.emoji}</span>
+                  <span className="font-semibold">{dayContent.length} {lensConfig.content.name}</span>
                 </div>
               )}
               {daySocial.length > 0 && (
                 <div className="flex items-center gap-1.5">
-                  <span>🥂</span>
-                  <span className="font-semibold">{daySocial.length} Social Event{daySocial.length > 1 ? 's' : ''}</span>
+                  <span>{lensConfig.social.emoji}</span>
+                  <span className="font-semibold">{daySocial.length} {lensConfig.social.name}</span>
                 </div>
               )}
               {dayEvidence.length > 0 && (
                 <div className="flex items-center gap-1.5">
-                  <span>🎯</span>
-                  <span className="font-semibold">{dayEvidence.length} Deliverable{dayEvidence.length > 1 ? 's' : ''}</span>
+                  <span>{lensConfig.evidence.emoji}</span>
+                  <span className="font-semibold">{dayEvidence.length} {lensConfig.evidence.name}</span>
                 </div>
               )}
             </div>
@@ -508,7 +673,7 @@ export default function CalendarModule({
             }`}
           >
             <span className={`w-1.5 h-1.5 rounded-full ${lensContent ? 'bg-purple-500 animate-pulse' : 'bg-matcha-primary/20'}`}></span>
-            <span>Content Lens</span>
+            <span>{lensConfig.content.emoji} {lensConfig.content.name}</span>
           </button>
 
           {/* Social Lens Toggle */}
@@ -521,7 +686,7 @@ export default function CalendarModule({
             }`}
           >
             <span className={`w-1.5 h-1.5 rounded-full ${lensSocial ? 'bg-strawberry-accent animate-pulse' : 'bg-matcha-primary/20'}`}></span>
-            <span>Social Lens</span>
+            <span>{lensConfig.social.emoji} {lensConfig.social.name}</span>
           </button>
 
           {/* Evidence Portfolio Toggle */}
@@ -534,7 +699,7 @@ export default function CalendarModule({
             }`}
           >
             <span className={`w-1.5 h-1.5 rounded-full ${lensEvidence ? 'bg-emerald-500 animate-pulse' : 'bg-matcha-primary/20'}`}></span>
-            <span>Evidence Lens</span>
+            <span>{lensConfig.evidence.emoji} {lensConfig.evidence.name}</span>
           </button>
 
           {/* Mood Heatmap Toggle */}
@@ -549,7 +714,161 @@ export default function CalendarModule({
             <span className={`w-1.5 h-1.5 rounded-full ${lensHeatmap ? 'bg-amber-500 animate-pulse' : 'bg-matcha-primary/20'}`}></span>
             <span>Mood Heatmap</span>
           </button>
+
+          {/* Customize Lenses Button */}
+          <button
+            onClick={() => setIsLensEditorOpen(!isLensEditorOpen)}
+            className="px-2.5 py-1.5 rounded-full text-xs font-semibold border bg-white border-matcha-primary/30 text-matcha-primary hover:bg-matcha-primary hover:text-white transition-all cursor-pointer flex items-center gap-1.5 shadow-xs ml-auto"
+            title="Edit Lens names, emojis & presets"
+          >
+            <Settings className="w-3.5 h-3.5" />
+            <span>{isLensEditorOpen ? 'Close Editor' : 'Edit 3 Lenses'}</span>
+          </button>
         </div>
+
+        {/* Customizable 3-Lens Editor Drawer */}
+        {isLensEditorOpen && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: 'auto' }}
+            exit={{ opacity: 0, height: 0 }}
+            className="p-4 bg-white border border-matcha-primary/30 rounded-2xl space-y-4 shadow-xs mt-3"
+          >
+            <div className="flex items-center justify-between border-b border-matcha-primary/10 pb-2">
+              <div className="flex items-center gap-2">
+                <Sparkles className="w-4 h-4 text-matcha-primary" />
+                <h3 className="text-xs font-bold font-mono text-[#5D524F] uppercase tracking-wider">
+                  Customize Your 3 Lenses
+                </h3>
+              </div>
+              <button
+                onClick={() => setIsLensEditorOpen(false)}
+                className="text-[#5D524F]/50 hover:text-[#5D524F] p-1 rounded-md"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Presets Bar */}
+            <div className="space-y-1.5">
+              <span className="text-[10px] font-bold text-[#5D524F]/70 font-mono uppercase tracking-wider">Quick Preset Archetypes:</span>
+              <div className="flex flex-wrap gap-1.5">
+                <button
+                  type="button"
+                  onClick={() => handlePresetLens('creator')}
+                  className="px-2.5 py-1 rounded-full text-[11px] bg-[#FAF0EC] hover:bg-matcha-primary/15 border border-matcha-primary/20 text-[#5D524F] font-medium cursor-pointer transition-colors"
+                >
+                  🎬 Creator Default
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handlePresetLens('projects')}
+                  className="px-2.5 py-1 rounded-full text-[11px] bg-[#FAF0EC] hover:bg-matcha-primary/15 border border-matcha-primary/20 text-[#5D524F] font-medium cursor-pointer transition-colors"
+                >
+                  💼 Professional & Work
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handlePresetLens('personal')}
+                  className="px-2.5 py-1 rounded-full text-[11px] bg-[#FAF0EC] hover:bg-matcha-primary/15 border border-matcha-primary/20 text-[#5D524F] font-medium cursor-pointer transition-colors"
+                >
+                  📚 Learning & Personal
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handlePresetLens('tech')}
+                  className="px-2.5 py-1 rounded-full text-[11px] bg-[#FAF0EC] hover:bg-matcha-primary/15 border border-matcha-primary/20 text-[#5D524F] font-medium cursor-pointer transition-colors"
+                >
+                  💻 Engineering & Tech
+                </button>
+              </div>
+            </div>
+
+            {/* Lens Editor Form Fields */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3 pt-2 border-t border-matcha-primary/10">
+              {/* Lens 1 Customizer */}
+              <div className="p-3 bg-purple-50/40 border border-purple-200/60 rounded-xl space-y-2">
+                <span className="text-[10px] font-bold text-purple-700 font-mono uppercase block">Lens 1 (Purple Layer)</span>
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={editContentEmoji}
+                    onChange={(e) => setEditContentEmoji(e.target.value)}
+                    className="w-10 text-center bg-white border border-purple-200 rounded-lg py-1 text-sm"
+                    title="Emoji Icon"
+                  />
+                  <input
+                    type="text"
+                    value={editContentName}
+                    onChange={(e) => setEditContentName(e.target.value)}
+                    className="flex-1 bg-white border border-purple-200 rounded-lg px-2 py-1 text-xs text-[#5D524F] font-semibold"
+                    placeholder="Lens Name"
+                  />
+                </div>
+              </div>
+
+              {/* Lens 2 Customizer */}
+              <div className="p-3 bg-[#FCDBD9]/30 border border-[#F4B9B8]/50 rounded-xl space-y-2">
+                <span className="text-[10px] font-bold text-strawberry-accent font-mono uppercase block">Lens 2 (Strawberry Layer)</span>
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={editSocialEmoji}
+                    onChange={(e) => setEditSocialEmoji(e.target.value)}
+                    className="w-10 text-center bg-white border border-[#F4B9B8]/50 rounded-lg py-1 text-sm"
+                    title="Emoji Icon"
+                  />
+                  <input
+                    type="text"
+                    value={editSocialName}
+                    onChange={(e) => setEditSocialName(e.target.value)}
+                    className="flex-1 bg-white border border-[#F4B9B8]/50 rounded-lg px-2 py-1 text-xs text-[#5D524F] font-semibold"
+                    placeholder="Lens Name"
+                  />
+                </div>
+              </div>
+
+              {/* Lens 3 Customizer */}
+              <div className="p-3 bg-emerald-50/40 border border-emerald-200/60 rounded-xl space-y-2">
+                <span className="text-[10px] font-bold text-emerald-700 font-mono uppercase block">Lens 3 (Emerald Layer)</span>
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={editEvidenceEmoji}
+                    onChange={(e) => setEditEvidenceEmoji(e.target.value)}
+                    className="w-10 text-center bg-white border border-emerald-200 rounded-lg py-1 text-sm"
+                    title="Emoji Icon"
+                  />
+                  <input
+                    type="text"
+                    value={editEvidenceName}
+                    onChange={(e) => setEditEvidenceName(e.target.value)}
+                    className="flex-1 bg-white border border-emerald-200 rounded-lg px-2 py-1 text-xs text-[#5D524F] font-semibold"
+                    placeholder="Lens Name"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Save & Reset Actions */}
+            <div className="flex items-center justify-between pt-2 border-t border-matcha-primary/10">
+              <button
+                type="button"
+                onClick={handleResetLensConfig}
+                className="px-3 py-1.5 rounded-full text-xs text-[#5D524F]/70 hover:text-[#5D524F] border border-matcha-primary/20 hover:bg-[#FAF0EC] transition-colors cursor-pointer flex items-center gap-1"
+              >
+                <RotateCcw className="w-3 h-3" /> Reset Defaults
+              </button>
+              <button
+                type="button"
+                onClick={handleSaveLensConfig}
+                className="px-4 py-1.5 rounded-full text-xs font-bold text-white bg-matcha-primary hover:bg-[#97b58e] transition-all cursor-pointer shadow-xs flex items-center gap-1"
+              >
+                <Check className="w-3.5 h-3.5" /> Save Lens Settings
+              </button>
+            </div>
+          </motion.div>
+        )}
       </div>
 
       {/* Shared Grid */}
@@ -634,7 +953,7 @@ export default function CalendarModule({
                   activeTab === 'content' ? 'border-purple-500 text-purple-700 font-bold' : 'border-transparent text-[#5D524F]/60 hover:text-[#5D524F]'
                 }`}
               >
-                🎬 Content Pipeline
+                {lensConfig.content.emoji} {lensConfig.content.name}
               </button>
               <button
                 type="button"
@@ -643,7 +962,7 @@ export default function CalendarModule({
                   activeTab === 'social' ? 'border-strawberry-accent text-strawberry-accent font-bold' : 'border-transparent text-[#5D524F]/60 hover:text-[#5D524F]'
                 }`}
               >
-                🥂 Social Pipeline
+                {lensConfig.social.emoji} {lensConfig.social.name}
               </button>
               <button
                 type="button"
@@ -652,7 +971,7 @@ export default function CalendarModule({
                   activeTab === 'evidence' ? 'border-emerald-500 text-emerald-700 font-bold' : 'border-transparent text-[#5D524F]/60 hover:text-[#5D524F]'
                 }`}
               >
-                🎯 Evidence Portfolio
+                {lensConfig.evidence.emoji} {lensConfig.evidence.name}
               </button>
             </div>
 
@@ -878,30 +1197,105 @@ export default function CalendarModule({
           {lensContent && dayContentItems.length > 0 && (
             <div className="space-y-2">
               <span className="text-[10px] font-bold text-purple-700 uppercase tracking-wider flex items-center gap-1 font-mono">
-                🎬 Content Lens Items ({dayContentItems.length})
+                {lensConfig.content.emoji} {lensConfig.content.name} Items ({dayContentItems.length})
               </span>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
                 {dayContentItems.map(item => (
-                  <div key={item.id} className="p-3 bg-purple-50/50 border border-purple-200/60 rounded-xl flex items-start justify-between gap-3 hover:bg-purple-100/40 transition-all">
-                    <div className="space-y-1 overflow-hidden">
-                      <div className="flex items-center gap-1.5 flex-wrap">
-                        <span className="text-[9px] font-bold px-1.5 py-0.5 bg-purple-100 text-purple-700 rounded border border-purple-200/40 font-sans">
-                          {item.phase}
-                        </span>
-                        <span className="text-[9px] font-mono font-bold px-1.5 py-0.5 bg-purple-200/50 text-purple-800 rounded-full border border-purple-200/30">
-                          {item.status}
-                        </span>
+                  <div key={item.id} className="p-3 bg-purple-50/50 border border-purple-200/60 rounded-xl flex flex-col justify-between gap-2 hover:bg-purple-100/30 transition-all">
+                    {editingContentId === item.id ? (
+                      /* Inline Editing Mode for Content Item */
+                      <div className="space-y-2 text-xs">
+                        <div className="font-bold text-purple-800 text-[11px] font-mono flex items-center gap-1">
+                          ✏️ Editing {lensConfig.content.name} Item
+                        </div>
+                        <input
+                          type="text"
+                          value={editCTitle}
+                          onChange={(e) => setEditCTitle(e.target.value)}
+                          className="w-full bg-white border border-purple-300 rounded px-2 py-1 text-xs text-[#5D524F]"
+                          placeholder="Title"
+                        />
+                        <div className="grid grid-cols-2 gap-2">
+                          <select
+                            value={editCPhase}
+                            onChange={(e) => {
+                              const phase = e.target.value as ContentPhase;
+                              setEditCPhase(phase);
+                              setEditCStatus(CONTENT_STATUS_MAP[phase][0]);
+                            }}
+                            className="bg-white border border-purple-300 rounded px-1.5 py-1 text-xs"
+                          >
+                            <option value="Planning">Planning</option>
+                            <option value="Production">Production</option>
+                            <option value="Completion">Completion</option>
+                          </select>
+                          <select
+                            value={editCStatus}
+                            onChange={(e) => setEditCStatus(e.target.value)}
+                            className="bg-white border border-purple-300 rounded px-1.5 py-1 text-xs"
+                          >
+                            {CONTENT_STATUS_MAP[editCPhase].map(s => <option key={s} value={s}>{s}</option>)}
+                            <option disabled>── Modifiers ──</option>
+                            {CONTENT_MODIFIERS.map(s => <option key={s} value={s}>{s}</option>)}
+                          </select>
+                        </div>
+                        <input
+                          type="text"
+                          value={editCNotes}
+                          onChange={(e) => setEditCNotes(e.target.value)}
+                          className="w-full bg-white border border-purple-300 rounded px-2 py-1 text-xs text-[#5D524F]"
+                          placeholder="Notes"
+                        />
+                        <div className="flex justify-end gap-1.5 pt-1">
+                          <button
+                            type="button"
+                            onClick={() => setEditingContentId(null)}
+                            className="px-2.5 py-1 text-[11px] rounded bg-gray-100 hover:bg-gray-200 text-[#5D524F]"
+                          >
+                            Cancel
+                          </button>
+                          <button
+                            type="button"
+                            onClick={handleSaveEditContent}
+                            className="px-3 py-1 text-[11px] font-bold rounded bg-purple-600 text-white hover:bg-purple-700"
+                          >
+                            Save Changes
+                          </button>
+                        </div>
                       </div>
-                      <h4 className="text-xs font-semibold text-[#5D524F] leading-tight">{item.title}</h4>
-                      {item.notes && <p className="text-[11px] text-[#5D524F]/70 truncate">{item.notes}</p>}
-                    </div>
-                    <button
-                      onClick={() => onDeleteContentItem(item.id)}
-                      className="text-purple-400 hover:text-red-500 p-1 hover:bg-purple-100/50 rounded transition-colors self-start cursor-pointer"
-                      title="Delete Content Item"
-                    >
-                      <Trash2 className="w-3.5 h-3.5" />
-                    </button>
+                    ) : (
+                      /* Read Display Mode */
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="space-y-1 overflow-hidden">
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            <span className="text-[9px] font-bold px-1.5 py-0.5 bg-purple-100 text-purple-700 rounded border border-purple-200/40 font-sans">
+                              {item.phase}
+                            </span>
+                            <span className="text-[9px] font-mono font-bold px-1.5 py-0.5 bg-purple-200/50 text-purple-800 rounded-full border border-purple-200/30">
+                              {item.status}
+                            </span>
+                          </div>
+                          <h4 className="text-xs font-semibold text-[#5D524F] leading-tight">{item.title}</h4>
+                          {item.notes && <p className="text-[11px] text-[#5D524F]/70 truncate">{item.notes}</p>}
+                        </div>
+                        <div className="flex items-center gap-1 self-start">
+                          <button
+                            onClick={() => handleStartEditContent(item)}
+                            className="text-purple-600 hover:text-purple-800 p-1 hover:bg-purple-100/50 rounded transition-colors cursor-pointer"
+                            title="Edit Item"
+                          >
+                            <Edit2 className="w-3.5 h-3.5" />
+                          </button>
+                          <button
+                            onClick={() => onDeleteContentItem(item.id)}
+                            className="text-purple-400 hover:text-red-500 p-1 hover:bg-purple-100/50 rounded transition-colors cursor-pointer"
+                            title="Delete Item"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>
@@ -912,30 +1306,103 @@ export default function CalendarModule({
           {lensSocial && daySocialEvents.length > 0 && (
             <div className="space-y-2">
               <span className="text-[10px] font-bold text-strawberry-accent uppercase tracking-wider flex items-center gap-1 font-mono">
-                🥂 Social Lens Commitments ({daySocialEvents.length})
+                {lensConfig.social.emoji} {lensConfig.social.name} Commitments ({daySocialEvents.length})
               </span>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
                 {daySocialEvents.map(event => (
-                  <div key={event.id} className="p-3 bg-[#FCDBD9]/30 border border-[#F4B9B8]/40 rounded-xl flex items-start justify-between gap-3 hover:bg-[#FCDBD9]/50 transition-all">
-                    <div className="space-y-1 overflow-hidden">
-                      <div className="flex items-center gap-1.5 flex-wrap">
-                        <span className="text-[9px] font-bold px-1.5 py-0.5 bg-[#FCDBD9] text-strawberry-accent rounded border border-[#F4B9B8]/20 font-sans">
-                          {event.phase}
-                        </span>
-                        <span className="text-[9px] font-mono font-bold px-1.5 py-0.5 bg-white text-strawberry-accent rounded-full border border-[#F4B9B8]/20">
-                          {event.status}
-                        </span>
+                  <div key={event.id} className="p-3 bg-[#FCDBD9]/30 border border-[#F4B9B8]/40 rounded-xl flex flex-col justify-between gap-2 hover:bg-[#FCDBD9]/50 transition-all">
+                    {editingSocialId === event.id ? (
+                      /* Inline Editing Mode for Social Event */
+                      <div className="space-y-2 text-xs">
+                        <div className="font-bold text-strawberry-accent text-[11px] font-mono flex items-center gap-1">
+                          ✏️ Editing {lensConfig.social.name} Event
+                        </div>
+                        <input
+                          type="text"
+                          value={editSTitle}
+                          onChange={(e) => setEditSTitle(e.target.value)}
+                          className="w-full bg-white border border-[#F4B9B8] rounded px-2 py-1 text-xs text-[#5D524F]"
+                          placeholder="Event Title"
+                        />
+                        <div className="grid grid-cols-2 gap-2">
+                          <select
+                            value={editSPhase}
+                            onChange={(e) => {
+                              const phase = e.target.value as SocialPhase;
+                              setEditSPhase(phase);
+                              setEditSStatus(SOCIAL_STATUS_MAP[phase][0]);
+                            }}
+                            className="bg-white border border-[#F4B9B8] rounded px-1.5 py-1 text-xs"
+                          >
+                            <option value="Planning">Planning</option>
+                            <option value="Active">Active</option>
+                            <option value="Completed">Completed</option>
+                          </select>
+                          <select
+                            value={editSStatus}
+                            onChange={(e) => setEditSStatus(e.target.value)}
+                            className="bg-white border border-[#F4B9B8] rounded px-1.5 py-1 text-xs"
+                          >
+                            {SOCIAL_STATUS_MAP[editSPhase].map(s => <option key={s} value={s}>{s}</option>)}
+                          </select>
+                        </div>
+                        <input
+                          type="text"
+                          value={editSNotes}
+                          onChange={(e) => setEditSNotes(e.target.value)}
+                          className="w-full bg-white border border-[#F4B9B8] rounded px-2 py-1 text-xs text-[#5D524F]"
+                          placeholder="Notes"
+                        />
+                        <div className="flex justify-end gap-1.5 pt-1">
+                          <button
+                            type="button"
+                            onClick={() => setEditingSocialId(null)}
+                            className="px-2.5 py-1 text-[11px] rounded bg-gray-100 hover:bg-gray-200 text-[#5D524F]"
+                          >
+                            Cancel
+                          </button>
+                          <button
+                            type="button"
+                            onClick={handleSaveEditSocial}
+                            className="px-3 py-1 text-[11px] font-bold rounded bg-strawberry-accent text-white hover:bg-[#d85e5c]"
+                          >
+                            Save Changes
+                          </button>
+                        </div>
                       </div>
-                      <h4 className="text-xs font-semibold text-[#5D524F] leading-tight">{event.title}</h4>
-                      {event.notes && <p className="text-[11px] text-[#5D524F]/70 truncate">{event.notes}</p>}
-                    </div>
-                    <button
-                      onClick={() => onDeleteSocialEvent(event.id)}
-                      className="text-strawberry-accent/80 hover:text-red-500 p-1 hover:bg-[#FCDBD9]/40 rounded transition-colors self-start cursor-pointer"
-                      title="Delete Social Event"
-                    >
-                      <Trash2 className="w-3.5 h-3.5" />
-                    </button>
+                    ) : (
+                      /* Read Display Mode */
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="space-y-1 overflow-hidden">
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            <span className="text-[9px] font-bold px-1.5 py-0.5 bg-[#FCDBD9] text-strawberry-accent rounded border border-[#F4B9B8]/20 font-sans">
+                              {event.phase}
+                            </span>
+                            <span className="text-[9px] font-mono font-bold px-1.5 py-0.5 bg-white text-strawberry-accent rounded-full border border-[#F4B9B8]/20">
+                              {event.status}
+                            </span>
+                          </div>
+                          <h4 className="text-xs font-semibold text-[#5D524F] leading-tight">{event.title}</h4>
+                          {event.notes && <p className="text-[11px] text-[#5D524F]/70 truncate">{event.notes}</p>}
+                        </div>
+                        <div className="flex items-center gap-1 self-start">
+                          <button
+                            onClick={() => handleStartEditSocial(event)}
+                            className="text-strawberry-accent hover:text-rose-800 p-1 hover:bg-[#FCDBD9]/40 rounded transition-colors cursor-pointer"
+                            title="Edit Event"
+                          >
+                            <Edit2 className="w-3.5 h-3.5" />
+                          </button>
+                          <button
+                            onClick={() => onDeleteSocialEvent(event.id)}
+                            className="text-strawberry-accent/80 hover:text-red-500 p-1 hover:bg-[#FCDBD9]/40 rounded transition-colors cursor-pointer"
+                            title="Delete Event"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>
@@ -946,46 +1413,145 @@ export default function CalendarModule({
           {lensEvidence && dayEvidenceDeliverables.length > 0 && (
             <div className="space-y-2">
               <span className="text-[10px] font-bold text-emerald-700 uppercase tracking-wider flex items-center gap-1 font-mono">
-                🎯 Evidence Portfolio / Completed Work ({dayEvidenceDeliverables.length})
+                {lensConfig.evidence.emoji} {lensConfig.evidence.name} Portfolio ({dayEvidenceDeliverables.length})
               </span>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 {dayEvidenceDeliverables.map(dev => (
                   <div key={dev.id} className="p-3 bg-emerald-50/50 border border-emerald-200/60 rounded-xl flex flex-col justify-between gap-2.5 hover:bg-emerald-100/30 transition-all">
-                    <div className="flex items-start justify-between gap-2">
-                      <div className="space-y-1">
-                        <h4 className="text-xs font-semibold text-[#5D524F] leading-tight">{dev.title}</h4>
-                        {dev.notes && <p className="text-[11px] text-[#5D524F]/80 leading-normal">{dev.notes}</p>}
+                    {editingEvidenceId === dev.id ? (
+                      /* Inline Editing Mode for Evidence Deliverable */
+                      <div className="space-y-2 text-xs">
+                        <div className="font-bold text-emerald-800 text-[11px] font-mono flex items-center gap-1">
+                          ✏️ Editing {lensConfig.evidence.name} Proof
+                        </div>
+                        <input
+                          type="text"
+                          value={editETitle}
+                          onChange={(e) => setEditETitle(e.target.value)}
+                          className="w-full bg-white border border-emerald-300 rounded px-2 py-1 text-xs text-[#5D524F]"
+                          placeholder="Deliverable Title"
+                        />
+                        <div className="grid grid-cols-3 gap-1.5">
+                          <div>
+                            <label className="text-[10px] text-[#5D524F]/70 font-semibold block">Capacity</label>
+                            <input
+                              type="number"
+                              min="1"
+                              value={editECapacity}
+                              onChange={(e) => setEditECapacity(Number(e.target.value))}
+                              className="w-full bg-white border border-emerald-300 rounded px-1.5 py-1 text-xs"
+                            />
+                          </div>
+                          <div>
+                            <label className="text-[10px] text-[#5D524F]/70 font-semibold block">Impact</label>
+                            <input
+                              type="number"
+                              min="0"
+                              value={editEImpactValue}
+                              onChange={(e) => setEditEImpactValue(Number(e.target.value))}
+                              className="w-full bg-white border border-emerald-300 rounded px-1.5 py-1 text-xs"
+                            />
+                          </div>
+                          <div>
+                            <label className="text-[10px] text-[#5D524F]/70 font-semibold block">Unit</label>
+                            <select
+                              value={editEImpactUnit}
+                              onChange={(e) => setEditEImpactUnit(e.target.value as any)}
+                              className="w-full bg-white border border-emerald-300 rounded px-1 py-1 text-xs"
+                            >
+                              <option value="hours">Hours</option>
+                              <option value="currency">$</option>
+                              <option value="percent">%</option>
+                            </select>
+                          </div>
+                        </div>
+                        <div>
+                          <label className="text-[10px] text-[#5D524F]/70 font-semibold flex justify-between">
+                            <span>Quality Score</span>
+                            <span>{editEQualityScore}%</span>
+                          </label>
+                          <input
+                            type="range"
+                            min="0"
+                            max="100"
+                            value={editEQualityScore}
+                            onChange={(e) => setEditEQualityScore(Number(e.target.value))}
+                            className="w-full h-1 bg-emerald-200 rounded accent-emerald-600"
+                          />
+                        </div>
+                        <input
+                          type="text"
+                          value={editENotes}
+                          onChange={(e) => setEditENotes(e.target.value)}
+                          className="w-full bg-white border border-emerald-300 rounded px-2 py-1 text-xs text-[#5D524F]"
+                          placeholder="Proof Details"
+                        />
+                        <div className="flex justify-end gap-1.5 pt-1">
+                          <button
+                            type="button"
+                            onClick={() => setEditingEvidenceId(null)}
+                            className="px-2.5 py-1 text-[11px] rounded bg-gray-100 hover:bg-gray-200 text-[#5D524F]"
+                          >
+                            Cancel
+                          </button>
+                          <button
+                            type="button"
+                            onClick={handleSaveEditEvidence}
+                            className="px-3 py-1 text-[11px] font-bold rounded bg-emerald-600 text-white hover:bg-emerald-700"
+                          >
+                            Save Changes
+                          </button>
+                        </div>
                       </div>
-                      <button
-                        onClick={() => onDeleteEvidenceDeliverable(dev.id)}
-                        className="text-emerald-500 hover:text-red-500 p-1 hover:bg-emerald-100/50 rounded transition-colors self-start cursor-pointer"
-                        title="Delete Deliverable Proof"
-                      >
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </button>
-                    </div>
+                    ) : (
+                      /* Read Display Mode */
+                      <>
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="space-y-1">
+                            <h4 className="text-xs font-semibold text-[#5D524F] leading-tight">{dev.title}</h4>
+                            {dev.notes && <p className="text-[11px] text-[#5D524F]/80 leading-normal">{dev.notes}</p>}
+                          </div>
+                          <div className="flex items-center gap-1 self-start">
+                            <button
+                              onClick={() => handleStartEditEvidence(dev)}
+                              className="text-emerald-600 hover:text-emerald-800 p-1 hover:bg-emerald-100/50 rounded transition-colors cursor-pointer"
+                              title="Edit Deliverable Proof"
+                            >
+                              <Edit2 className="w-3.5 h-3.5" />
+                            </button>
+                            <button
+                              onClick={() => onDeleteEvidenceDeliverable(dev.id)}
+                              className="text-emerald-500 hover:text-red-500 p-1 hover:bg-emerald-100/50 rounded transition-colors cursor-pointer"
+                              title="Delete Deliverable Proof"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                        </div>
 
-                    {/* Deliverable scoring presentation */}
-                    <div className="grid grid-cols-3 gap-2 pt-2 border-t border-matcha-primary/10 text-center">
-                      <div className="bg-white p-1.5 rounded-lg border border-matcha-primary/15">
-                        <span className="text-[8px] uppercase text-[#5D524F]/60 font-bold block">Capacity</span>
-                        <span className="text-[11px] font-mono font-bold text-emerald-700 flex items-center justify-center gap-0.5">
-                          <Activity className="w-3 h-3 text-emerald-600" /> {dev.capacityCount}x
-                        </span>
-                      </div>
-                      <div className="bg-white p-1.5 rounded-lg border border-matcha-primary/15">
-                        <span className="text-[8px] uppercase text-[#5D524F]/60 font-bold block">Impact</span>
-                        <span className="text-[11px] font-mono font-bold text-emerald-700 truncate block">
-                          {dev.impactUnit === 'currency' ? `$${dev.impactValue}` : `${dev.impactValue}${dev.impactUnit === 'hours' ? 'h' : '%'}`}
-                        </span>
-                      </div>
-                      <div className="bg-white p-1.5 rounded-lg border border-matcha-primary/15">
-                        <span className="text-[8px] uppercase text-[#5D524F]/60 font-bold block">Quality</span>
-                        <span className="text-[11px] font-mono font-bold text-emerald-700 flex items-center justify-center gap-0.5">
-                          <CheckCircle className="w-3 h-3 text-emerald-600" /> {dev.qualityScore}%
-                        </span>
-                      </div>
-                    </div>
+                        {/* Deliverable scoring presentation */}
+                        <div className="grid grid-cols-3 gap-2 pt-2 border-t border-matcha-primary/10 text-center">
+                          <div className="bg-white p-1.5 rounded-lg border border-matcha-primary/15">
+                            <span className="text-[8px] uppercase text-[#5D524F]/60 font-bold block">Capacity</span>
+                            <span className="text-[11px] font-mono font-bold text-emerald-700 flex items-center justify-center gap-0.5">
+                              <Activity className="w-3 h-3 text-emerald-600" /> {dev.capacityCount}x
+                            </span>
+                          </div>
+                          <div className="bg-white p-1.5 rounded-lg border border-matcha-primary/15">
+                            <span className="text-[8px] uppercase text-[#5D524F]/60 font-bold block">Impact</span>
+                            <span className="text-[11px] font-mono font-bold text-emerald-700 truncate block">
+                              {dev.impactUnit === 'currency' ? `$${dev.impactValue}` : `${dev.impactValue}${dev.impactUnit === 'hours' ? 'h' : '%'}`}
+                            </span>
+                          </div>
+                          <div className="bg-white p-1.5 rounded-lg border border-matcha-primary/15">
+                            <span className="text-[8px] uppercase text-[#5D524F]/60 font-bold block">Quality</span>
+                            <span className="text-[11px] font-mono font-bold text-emerald-700 flex items-center justify-center gap-0.5">
+                              <CheckCircle className="w-3 h-3 text-emerald-600" /> {dev.qualityScore}%
+                            </span>
+                          </div>
+                        </div>
+                      </>
+                    )}
                   </div>
                 ))}
               </div>

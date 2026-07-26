@@ -254,9 +254,6 @@ export default function SettingsPanel({
             <p className="text-[11px] text-[#5D524F]/70">Own your data. Fully local, zero subscription fees.</p>
           </div>
         </div>
-        <div className="text-xs font-mono font-bold bg-[#FAF0EC] text-matcha-primary border border-matcha-primary/25 px-2 py-1 rounded">
-          Pricing Tier: COMPLETE
-        </div>
       </div>
 
       <div className="p-5 space-y-6">

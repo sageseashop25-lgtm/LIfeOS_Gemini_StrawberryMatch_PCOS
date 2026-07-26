@@ -63,11 +63,15 @@ export interface PeriodLog {
   pcosSymptoms?: string[]; // e.g. ["Hirsutism", "Hormonal Acne", "Hair Thinning", "Sugar Cravings", "Ovarian Pain", "Fatigue/Brain Fog"]
 }
 
-export interface CycleSettings {
-  cycleLength: number; // e.g. 28 days
-  periodLength: number; // e.g. 5 days
-  lastPeriodDate: string; // YYYY-MM-DD start of last period
-  isPCOSEnabled?: boolean; // PCOS tracking mode activated
-  isIrregular?: boolean; // Unpredictable cycle lengths
+export interface LensMeta {
+  name: string;
+  emoji: string;
+  description: string;
+}
+
+export interface LensConfig {
+  content: LensMeta;
+  social: LensMeta;
+  evidence: LensMeta;
 }
 

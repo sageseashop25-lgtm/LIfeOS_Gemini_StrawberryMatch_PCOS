@@ -136,14 +136,69 @@ export default function JournalModule({
   onDeletePeriodLog,
   onUpdateCycleSettings
 }: JournalModuleProps) {
+  const DEFAULT_MOODS = [
+    '🌸 Serene',
+    '⚡ Focused',
+    '🔋 Energetic',
+    '📝 Grateful',
+    '😴 Tired',
+    '💭 Reflective',
+    '🌱 Growing'
+  ];
+
+  const [moodList, setMoodList] = useState<string[]>(() => {
+    try {
+      const saved = localStorage.getItem('custom_user_moods');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      }
+    } catch (e) {}
+    return DEFAULT_MOODS;
+  });
+
+  const [isMoodEditorOpen, setIsMoodEditorOpen] = useState(false);
+  const [newMoodInput, setNewMoodInput] = useState('');
+
   const [content, setContent] = useState('');
-  const [mood, setMood] = useState(PRESET_MOODS[0]);
+  const [mood, setMood] = useState(moodList[0] || '🌸 Serene');
   const [tags, setTags] = useState<string[]>([]);
   const [tagInput, setTagInput] = useState('');
   const [photos, setPhotos] = useState<string[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [filterTag, setFilterTag] = useState<string | null>(null);
   const [filterMood, setFilterMood] = useState<string | null>(null);
+
+  // Sync moodList with localStorage
+  React.useEffect(() => {
+    try {
+      localStorage.setItem('custom_user_moods', JSON.stringify(moodList));
+    } catch (e) {}
+  }, [moodList]);
+
+  const handleAddCustomMood = () => {
+    const trimmed = newMoodInput.trim();
+    if (trimmed && !moodList.includes(trimmed)) {
+      const updated = [...moodList, trimmed];
+      setMoodList(updated);
+      setMood(trimmed);
+      setNewMoodInput('');
+    }
+  };
+
+  const handleDeleteMood = (moodToDelete: string) => {
+    if (moodList.length <= 1) return;
+    const updated = moodList.filter(m => m !== moodToDelete);
+    setMoodList(updated);
+    if (mood === moodToDelete) {
+      setMood(updated[0]);
+    }
+  };
+
+  const handleResetDefaultMoods = () => {
+    setMoodList(DEFAULT_MOODS);
+    setMood(DEFAULT_MOODS[0]);
+  };
 
   // Cycle & Period logging and tab states
   const [activeTab, setActiveTab] = useState<'mood' | 'cycle' | 'correlation' | 'trends'>('mood');
@@ -592,9 +647,12 @@ export default function JournalModule({
       </div>
 
       {/* Main Content Scrollable */}
-      <div className="flex-1 overflow-y-auto p-5 space-y-6">
-        
-        {/* Analytics & Cycle Section Tabs */}
+      <div className="flex-1 overflow-y-auto p-5">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+          
+          {/* Left Column (5 cols): Analytics Tabs & New Entry Creation */}
+          <div className="lg:col-span-5 space-y-6">
+            {/* Analytics & Cycle Section Tabs */}
         <div className="bg-[#FAF0EC]/60 border border-matcha-primary/20 rounded-xl p-4 space-y-4 shadow-xs">
           {/* Tab Navigation */}
           <div className="flex border-b border-matcha-primary/10 pb-2 gap-2 text-xs font-semibold overflow-x-auto scrollbar-none">
@@ -690,14 +748,6 @@ export default function JournalModule({
                         />
                       );
                     })}
-                  </div>
-
-                  {/* Created by Tyra Azman Credit Banner */}
-                  <div className="flex justify-center items-center py-1">
-                    <span className="text-[11px] font-bold tracking-wider text-matcha-primary bg-[#FAF0EC] px-3.5 py-1 rounded-full border border-matcha-primary/20 font-sans shadow-xs flex items-center gap-1.5">
-                      <Sparkles className="w-3.5 h-3.5 text-matcha-primary animate-pulse" />
-                      <span>Created by Tyra Azman</span>
-                    </span>
                   </div>
 
                   {/* Grid of moods with percentages */}
@@ -1608,20 +1658,82 @@ export default function JournalModule({
 
           {/* Mood and Tag picker */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-            {/* Mood picker */}
+            {/* Mood picker with Custom Mood Editor */}
             <div>
-              <label className="text-xs font-bold text-[#5D524F]/80 flex items-center gap-1.5 mb-1.5 uppercase font-mono tracking-wider text-[10px]">
-                <Smile className="w-3.5 h-3.5 text-strawberry-accent" /> Mood
-              </label>
+              <div className="flex items-center justify-between mb-1.5">
+                <label className="text-xs font-bold text-[#5D524F]/80 flex items-center gap-1.5 uppercase font-mono tracking-wider text-[10px]">
+                  <Smile className="w-3.5 h-3.5 text-strawberry-accent" /> Mood
+                </label>
+                <button
+                  type="button"
+                  onClick={() => setIsMoodEditorOpen(!isMoodEditorOpen)}
+                  className="text-[10px] font-bold text-matcha-primary hover:text-[#97b58e] underline cursor-pointer font-mono"
+                >
+                  {isMoodEditorOpen ? 'Done Editing' : '⚙️ Edit Custom Moods'}
+                </button>
+              </div>
+
+              {/* Mood Editor Panel */}
+              {isMoodEditorOpen && (
+                <div className="bg-[#FAF0EC]/60 border border-matcha-primary/20 p-2.5 rounded-xl space-y-2 mb-2 animate-in fade-in duration-200">
+                  <span className="text-[10px] font-bold uppercase font-mono text-[#5D524F]">Customize Your Moods</span>
+                  
+                  {/* Current Mood List Chips */}
+                  <div className="flex flex-wrap gap-1">
+                    {moodList.map(m => (
+                      <span key={m} className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-white text-[#5D524F] text-[11px] border border-matcha-primary/20 shadow-xs font-medium">
+                        {m}
+                        <button
+                          type="button"
+                          onClick={() => handleDeleteMood(m)}
+                          className="text-rose-500 hover:text-rose-700 font-bold ml-1 cursor-pointer"
+                          title="Delete mood"
+                        >
+                          ×
+                        </button>
+                      </span>
+                    ))}
+                  </div>
+
+                  {/* Add New Mood Input */}
+                  <div className="flex gap-1.5 pt-1">
+                    <input
+                      type="text"
+                      value={newMoodInput}
+                      onChange={(e) => setNewMoodInput(e.target.value)}
+                      onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), handleAddCustomMood())}
+                      placeholder="e.g. 🥰 Joyful, 🔥 Motivated"
+                      className="bg-white border border-matcha-primary/20 rounded-lg px-2 py-1 text-xs w-full focus:outline-none focus:ring-1 focus:ring-matcha-primary text-[#5D524F]"
+                    />
+                    <button
+                      type="button"
+                      onClick={handleAddCustomMood}
+                      className="px-2.5 py-1 bg-matcha-primary hover:bg-[#97b58e] text-white rounded-lg text-xs font-bold cursor-pointer transition-all shrink-0"
+                    >
+                      Add
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleResetDefaultMoods}
+                      className="px-2 py-1 bg-white hover:bg-[#FAF0EC] text-[#5D524F]/70 rounded-lg text-[10px] font-mono border border-matcha-primary/20 cursor-pointer shrink-0"
+                      title="Reset to default preset moods"
+                    >
+                      Reset
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* Selectable Moods list */}
               <div className="flex flex-wrap gap-1">
-                {PRESET_MOODS.map(m => (
+                {moodList.map(m => (
                   <button
                     key={m}
                     type="button"
                     onClick={() => setMood(m)}
                     className={`px-2.5 py-1 text-xs rounded-full border transition-all cursor-pointer ${
                       mood === m 
-                        ? 'bg-matcha-primary text-white border-matcha-primary shadow-sm' 
+                        ? 'bg-matcha-primary text-white border-matcha-primary shadow-sm font-bold' 
                         : 'bg-white text-[#5D524F]/80 border-matcha-primary/20 hover:bg-[#FAF0EC]/40 hover:border-matcha-primary/40'
                     }`}
                   >
@@ -1729,114 +1841,127 @@ export default function JournalModule({
             </button>
           </div>
         </form>
-
-        {/* Filter & Search Bar */}
-        <div className="space-y-3">
-          <div className="relative">
-            <Search className="absolute left-3 top-2.5 w-4 h-4 text-matcha-primary" />
-            <input
-              type="text"
-              placeholder="Search journals by text, mood, tags, or date..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-9 pr-4 py-2 text-xs bg-white border border-matcha-primary/20 rounded-xl focus:outline-none focus:ring-1 focus:ring-matcha-primary text-[#5D524F] placeholder-[#5D524F]/40 shadow-xs"
-            />
           </div>
 
-          {/* Tag filters */}
-          <div className="flex flex-wrap items-center gap-1">
-            <span className="text-[10px] text-[#5D524F]/60 mr-1.5 font-bold uppercase tracking-wider font-mono">Filter tag:</span>
-            <button
-              onClick={() => setFilterTag(null)}
-              className={`px-2.5 py-0.5 text-[10px] rounded-full border transition-all cursor-pointer font-medium ${
-                filterTag === null ? 'bg-matcha-primary text-white border-matcha-primary' : 'bg-white text-[#5D524F] border-matcha-primary/20 hover:bg-[#FAF0EC]/60'
-              }`}
-            >
-              All
-            </button>
-            {Array.from(new Set(entries.flatMap(e => e.tags))).map(t => (
-              <button
-                key={t}
-                onClick={() => setFilterTag(t)}
-                className={`px-2.5 py-0.5 text-[10px] rounded-full border transition-all cursor-pointer font-medium ${
-                  filterTag === t ? 'bg-matcha-primary text-white border-matcha-primary' : 'bg-white text-[#5D524F] border-matcha-primary/20 hover:bg-[#FAF0EC]/60'
-                }`}
-              >
-                #{t}
-              </button>
-            ))}
-          </div>
-        </div>
+          {/* Right Column (7 cols): Journal History Side-by-Side */}
+          <div className="lg:col-span-7 space-y-4 bg-[#FAF0EC]/30 p-4 border border-matcha-primary/15 rounded-2xl">
+            {/* Filter & Search Bar */}
+            <div className="space-y-3">
+              <div className="relative">
+                <Search className="absolute left-3 top-2.5 w-4 h-4 text-matcha-primary" />
+                <input
+                  type="text"
+                  placeholder="Search journals by text, mood, tags, or date..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="w-full pl-9 pr-4 py-2 text-xs bg-white border border-matcha-primary/20 rounded-xl focus:outline-none focus:ring-1 focus:ring-matcha-primary text-[#5D524F] placeholder-[#5D524F]/40 shadow-xs"
+                />
+              </div>
 
-        {/* Entries list with transitions */}
-        <div className="space-y-3">
-          <span className="text-xs font-bold uppercase tracking-wider text-[#5D524F] block">Journal History</span>
-          <div className="space-y-4">
-            <AnimatePresence initial={false}>
-              {filteredEntries.map((entry, index) => (
-                <motion.div
-                  key={entry.id}
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, scale: 0.95 }}
-                  className="p-4 rounded-2xl border border-matcha-primary/15 bg-white hover:border-matcha-primary/35 transition-all space-y-3 relative group shadow-xs"
+              {/* Tag filters */}
+              <div className="flex flex-wrap items-center gap-1">
+                <span className="text-[10px] text-[#5D524F]/60 mr-1.5 font-bold uppercase tracking-wider font-mono">Filter tag:</span>
+                <button
+                  onClick={() => setFilterTag(null)}
+                  className={`px-2.5 py-0.5 text-[10px] rounded-full border transition-all cursor-pointer font-medium ${
+                    filterTag === null ? 'bg-matcha-primary text-white border-matcha-primary' : 'bg-white text-[#5D524F] border-matcha-primary/20 hover:bg-[#FAF0EC]/60'
+                  }`}
                 >
+                  All
+                </button>
+                {Array.from(new Set(entries.flatMap(e => e.tags))).map(t => (
                   <button
-                    onClick={() => onDeleteEntry(entry.id)}
-                    className="absolute top-4 right-4 text-[#5D524F]/40 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity p-1 hover:bg-[#FAF0EC] rounded-full cursor-pointer"
-                    title="Delete Entry"
+                    key={t}
+                    onClick={() => setFilterTag(t)}
+                    className={`px-2.5 py-0.5 text-[10px] rounded-full border transition-all cursor-pointer font-medium ${
+                      filterTag === t ? 'bg-matcha-primary text-white border-matcha-primary' : 'bg-white text-[#5D524F] border-matcha-primary/20 hover:bg-[#FAF0EC]/60'
+                    }`}
                   >
-                    <Trash2 className="w-3.5 h-3.5" />
+                    #{t}
                   </button>
+                ))}
+              </div>
+            </div>
 
-                  <div className="flex items-center justify-between">
-                    <span className={`${index === 4 ? 'text-[14px]' : 'text-xs'} font-mono font-semibold text-[#5D524F]/80 bg-[#FAF0EC]/40 px-2 py-0.5 rounded-full border border-matcha-primary/10`}>
-                      {entry.date}
-                    </span>
-                    <span className="text-xs bg-[#FAF0EC] px-2.5 py-0.5 rounded-full border border-matcha-primary/10 font-medium text-[#5D524F]">
-                      {entry.mood}
-                    </span>
-                  </div>
+            {/* Entries list side-by-side grid */}
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold uppercase tracking-wider text-[#5D524F] block">Journal History</span>
+                <span className="text-[10px] font-mono text-[#5D524F]/60">Showing {filteredEntries.length} entries</span>
+              </div>
 
-                  <p className="text-sm text-[#5D524F] whitespace-pre-wrap leading-relaxed">
-                    {entry.content}
-                  </p>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
+                <AnimatePresence initial={false}>
+                  {filteredEntries.map((entry, index) => (
+                    <motion.div
+                      key={entry.id}
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, scale: 0.95 }}
+                      className="p-4 rounded-2xl border border-matcha-primary/15 bg-white hover:border-matcha-primary/35 transition-all space-y-3 relative group shadow-xs flex flex-col justify-between"
+                    >
+                      <div>
+                        <button
+                          onClick={() => onDeleteEntry(entry.id)}
+                          className="absolute top-3 right-3 text-[#5D524F]/40 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity p-1 hover:bg-[#FAF0EC] rounded-full cursor-pointer"
+                          title="Delete Entry"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
 
-                  {/* Attachment carousel */}
-                  {entry.photos && entry.photos.length > 0 && (
-                    <div className="flex flex-wrap gap-2 pt-1">
-                      {entry.photos.map((p, idx) => (
-                        <div key={idx} className="w-16 h-16 rounded-xl overflow-hidden border border-matcha-primary/15 shadow-sm">
-                          <img src={p} alt="Attachment" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                        <div className="flex items-center justify-between pr-6 mb-2">
+                          <span className="text-xs font-mono font-semibold text-[#5D524F]/80 bg-[#FAF0EC]/40 px-2 py-0.5 rounded-full border border-matcha-primary/10">
+                            {entry.date}
+                          </span>
+                          <span className="text-[11px] bg-[#FAF0EC] px-2 py-0.5 rounded-full border border-matcha-primary/10 font-medium text-[#5D524F]">
+                            {entry.mood}
+                          </span>
                         </div>
-                      ))}
-                    </div>
-                  )}
 
-                  {/* Entry tags */}
-                  {entry.tags && entry.tags.length > 0 && (
-                    <div className="flex flex-wrap gap-1.5 pt-1">
-                      {entry.tags.map(t => (
-                        <span key={t} className="px-2.5 py-0.5 text-[10px] rounded-full bg-white text-[#5D524F]/70 font-semibold border border-matcha-primary/15">
-                          #{t}
-                        </span>
-                      ))}
-                    </div>
-                  )}
-                </motion.div>
-              ))}
+                        <p className="text-xs text-[#5D524F] whitespace-pre-wrap leading-relaxed">
+                          {entry.content}
+                        </p>
+                      </div>
 
-              {filteredEntries.length === 0 && (
-                <div className="text-center py-8 bg-white border border-dashed border-matcha-primary/20 rounded-2xl">
-                  <BookOpen className="w-8 h-8 text-matcha-primary/40 mx-auto mb-2" />
-                  <p className="text-xs font-bold text-[#5D524F]/80">No journal entries found</p>
-                  <p className="text-[11px] text-[#5D524F]/50 mt-0.5">Try changing the search query or select a date to add an entry</p>
-                </div>
-              )}
-            </AnimatePresence>
+                      <div className="space-y-2 pt-2 border-t border-matcha-primary/5">
+                        {/* Attachment gallery */}
+                        {entry.photos && entry.photos.length > 0 && (
+                          <div className="flex flex-wrap gap-1.5">
+                            {entry.photos.map((p, idx) => (
+                              <div key={idx} className="w-12 h-12 rounded-lg overflow-hidden border border-matcha-primary/15 shadow-sm">
+                                <img src={p} alt="Attachment" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                              </div>
+                            ))}
+                          </div>
+                        )}
+
+                        {/* Entry tags */}
+                        {entry.tags && entry.tags.length > 0 && (
+                          <div className="flex flex-wrap gap-1">
+                            {entry.tags.map(t => (
+                              <span key={t} className="px-2 py-0.5 text-[9px] rounded-full bg-[#FAF0EC]/60 text-[#5D524F]/80 font-semibold border border-matcha-primary/15">
+                                #{t}
+                              </span>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    </motion.div>
+                  ))}
+                </AnimatePresence>
+
+                {filteredEntries.length === 0 && (
+                  <div className="col-span-full text-center py-8 bg-white border border-dashed border-matcha-primary/20 rounded-2xl">
+                    <BookOpen className="w-8 h-8 text-matcha-primary/40 mx-auto mb-2" />
+                    <p className="text-xs font-bold text-[#5D524F]/80">No journal entries found</p>
+                    <p className="text-[11px] text-[#5D524F]/50 mt-0.5">Try changing the search query or select a date to add an entry</p>
+                  </div>
+                )}
+              </div>
+            </div>
           </div>
-        </div>
 
+        </div>
       </div>
     </div>
   );
